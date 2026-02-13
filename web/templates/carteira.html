@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>🚀 Ciclo Executado</h1>
+
+<p>O ciclo foi concluído com sucesso.</p>
+
+<h2>Resumo</h2>
+
+<ul>
+    <li>Avaliados: {{ resultado.avaliados|length }}</li>
+    <li>Alertas: {{ resultado.alertas|length }}</li>
+</ul>
+
+<a class="btn" href="/dashboard">Ver Dashboard</a>
+
+{% endblock %}

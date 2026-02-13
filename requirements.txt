@@ -1,4 +1,9 @@
-yfinance
+flask
 pandas
-tabulate
+yfinance
 requests
+tabulate
+beautifulsoup4
+lxml
+schedule
+python-dateutil

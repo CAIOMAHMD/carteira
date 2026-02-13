@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Adicionar Ativo</h1>
+
+<form method="POST">
+    <label>Ticker:</label>
+    <input type="text" name="ticker" required>
+
+    <label>Quantidade:</label>
+    <input type="number" name="quant" required>
+
+    <label>Tipo:</label>
+    <select name="tipo">
+        <option value="acao">Ação</option>
+        <option value="fii">FII</option>
+    </select>
+
+    <button type="submit">Salvar</button>
+</form>
+
+<a href="/" class="btn">Voltar</a>
+
+{% endblock %}

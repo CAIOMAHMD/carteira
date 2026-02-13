@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>⚙️ Configurações</h1>
+
+<form method="POST">
+    <label>Aporte:</label>
+    <input type="number" name="aporte" value="500">
+
+    <label>Modo:</label>
+    <select name="modo">
+        <option value="conservador">Conservador</option>
+        <option value="moderado" selected>Moderado</option>
+        <option value="agressivo">Agressivo</option>
+    </select>
+
+    <button class="btn" type="submit">Salvar e Rodar</button>
+</form>
+
+{% endblock %}

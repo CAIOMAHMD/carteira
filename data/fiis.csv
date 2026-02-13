@@ -1,10 +1,2 @@
-﻿Ticker;Quant.;PreçoAtual;Variacao;Rentabilidade;ValorPatrimonialCota;UltimoRendimento;PatrimonioTotal;NumeroCotistas;CotasEmitidas;Vacancia;PVP;DY12Meses;YieldOnCost;TIPO
-KNCR11;6;105,67;0,45;1,60;102,26;1,20;9.7B;478.971;95.264.821;0,00;1,03;13,90;13,94;Papel
-XPML11;5;110,57;0,99;1,68;108,16;0,92;6.3B;633.071;58.559.844;4,20;1,02;10,01;10,08;Tijolo
-BTLG11;5;102,71;-0,08;0,69;102,92;0,79;5.5B;438.512;53.310.341;3,00;1,00;9,17;9,15;Tijolo
-TRXF11;5;93,00;-4,13;-3,94;101,01;0,93;6.3B;237.702;62.430.691;0,22;0,92;12,69;12,17;Tijolo
-HGLG11;2;156,68;-0,13;-0,05;166,58;1,10;7.1B;525.064;42.404.664;2,40;0,94;8,41;8,41;Tijolo
-GARE11;5;8,57;-0,60;0,23;9,32;0,08;2.7B;446.250;289.186.427;0,00;0,92;11,61;11,55;Tijolo
-GGRC11;4;9,99;0,10;0,20;11,22;0,10;2.4B;257.321;214.249.653;4,80;0,89;12,05;12,07;Tijolo
-HGBS11;1;20,02;0,15;0,40;20,75;0,16;2.7B;144.635;129.132.999;4,60;0,97;9,28;9,30;Tijolo
-CPTS11;1;8,04;2,16;2,41;9,18;0,09;3.2B;355.270;348.245.936;0,00;0,89;12,63;13,25;Papel
+﻿ticker;quant;price;dy;pvp;vacancia;vpa;ultimo_rendimento;patrimonio_total;num_cotistas;cotas_emitidas;tipo_fii;is_fii
+HGLG11;2;157.0;8.37;0.94;2.91;166.48936170212767;1.095075;0;68543;0;Multicategoria;True

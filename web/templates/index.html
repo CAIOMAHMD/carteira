@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Minha Carteira</h1>
+
+<!-- ===================== -->
+<!-- RESUMO EM CARDS -->
+<!-- ===================== -->
+<div class="grid">
+
+    <div class="card">
+        <h3>Total de Ativos</h3>
+        <div class="card-value">{{ carteira|length }}</div>
+    </div>
+
+    <div class="card">
+        <h3>Ações com Dados</h3>
+        <div class="card-value">{{ resultado.acoes|length }}</div>
+    </div>
+
+    <div class="card">
+        <h3>FIIs com Dados</h3>
+        <div class="card-value">{{ resultado.fiis|length }}</div>
+    </div>
+
+</div>
+
+<a href="/add" class="btn">Adicionar Ativo</a>
+<a href="/run" class="btn">Atualizar Dados</a>
+
+
+<!-- ===================== -->
+<!-- AÇÕES COMPLETAS -->
+<!-- ===================== -->
+<h2>Ações — Dados Completos</h2>
+
+{% if resultado.acoes %}
+<table>
+    <tr>
+        <th>Ticker</th>
+        <th>Crescimento</th>
+        <th>Preço</th>
+        <th>Graham</th>
+        <th>Bazin</th>
+        <th>Lynch</th>
+        <th>V. Justo</th>
+        <th>Margem</th>
+        <th>Score</th>
+        <th>Status</th>
+    </tr>
+
+    {% for a in resultado.acoes %}
+    <tr>
+        <td>{{ a.ticker }}</td>
+        <td>{{ a.crescimento }}</td>
+        <td>R$ {{ a.preco }}</td>
+        <td>R$ {{ a.graham }}</td>
+        <td>R$ {{ a.bazin }}</td>
+        <td>R$ {{ a.lynch }}</td>
+        <td>R$ {{ a.valor_justo }}</td>
+        <td class="{{ 'negativo' if a.margem < 0 else 'score' }}">{{ a.margem }}%</td>
+        <td class="score">{{ a.score }}</td>
+        <td>{{ a.status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>Nenhuma ação encontrada na BRAPI.</p>
+{% endif %}
+
+
+
+<!-- ===================== -->
+<!-- FIIs COMPLETOS -->
+<!-- ===================== -->
+<h2>Fundos Imobiliários — Dados Completos</h2>
+
+{% if resultado.fiis %}
+<table>
+    <tr>
+        <th>Ticker</th>
+        <th>Preço</th>
+        <th>P/VP</th>
+        <th>DY</th>
+        <th>V. Justo</th>
+        <th>Score</th>
+        <th>Status</th>
+    </tr>
+
+    {% for f in resultado.fiis %}
+    <tr>
+        <td>{{ f.ticker }}</td>
+        <td>R$ {{ f.preco }}</td>
+        <td>{{ f.pvp }}</td>
+        <td>{{ f.dy }}%</td>
+        <td>R$ {{ f.valor_justo }}</td>
+        <td class="score">{{ f.score }}</td>
+        <td>{{ f.status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>Nenhum FII encontrado na BRAPI.</p>
+{% endif %}
+
+{% endblock %}

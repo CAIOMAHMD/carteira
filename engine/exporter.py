@@ -1,16 +1,25 @@
-from analyzer import PortfolioAnalyzer
+from engine.analyzer import PortfolioAnalyzer
 
 class Exporter:
     @staticmethod
-    def export_html(acoes, fiis, path, sugestao_aporte):
+    def export_html(
+        acoes,
+        fiis,
+        path,
+        sugestao_aporte,
+        tendencias_ativos=None,
+        alertas=None,
+        riscos=None
+    ):
         todos = acoes + fiis
         media_s = sum(x['score'] for x in todos) / len(todos) if todos else 0
         termometro = "⚖️ NEUTRO" if 4 <= media_s <= 7 else ("🔥 CARO" if media_s < 4 else "❄️ OPORTUNO")
 
         tendencia = PortfolioAnalyzer.get_trend_data()
-        
+
         def fmt_delta(val):
-            if val == 0: return '<span style="color: #718096; font-size: 11px;">(0.0%)</span>'
+            if val == 0:
+                return '<span style="color: #718096; font-size: 11px;">(0.0%)</span>'
             cor = "#2f855a" if val > 0 else "#c53030"
             seta = "▲" if val > 0 else "▼"
             return f'<span style="color: {cor}; font-size: 11px; font-weight: bold;">{seta} {abs(val):.1f}%</span>'
@@ -26,6 +35,9 @@ class Exporter:
                 </div>
             """
 
+        # ------------------------------------------------------------
+        # HTML PRINCIPAL
+        # ------------------------------------------------------------
         html = f"""
         <html><head><meta charset="UTF-8"><style>
             body {{ font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 25px; font-size: 12px; color: #333; }}
@@ -35,8 +47,6 @@ class Exporter:
             th {{ background: #2d3748; color: white; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }}
             
             .ticker {{ font-weight: bold; color: #3182ce; }}
-            
-            /* CORES DAS COLUNAS VALUATION */
             .col-valuation {{ background-color: #fffaf0 !important; color: #744210 !important; }}
             .v-justo-celula {{ background-color: #ebf8ff !important; color: #2c5282 !important; font-weight: bold !important; border-left: 2px solid #3182ce !important; }}
             
@@ -56,7 +66,24 @@ class Exporter:
                 <div class="card">Score Médio<br><b style="font-size: 18px;">{media_s:.1f}</b></div>
                 {html_cards_evolucao}
             </div>
+        """
 
+        # ------------------------------------------------------------
+        # ALERTAS
+        # ------------------------------------------------------------
+        if alertas:
+            html += """
+            <h2>🔔 Alertas Inteligentes</h2>
+            <ul style='background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);'>
+            """
+            for a in alertas:
+                html += f"<li style='margin-bottom: 6px;'>{a}</li>"
+            html += "</ul>"
+
+        # ------------------------------------------------------------
+        # AÇÕES
+        # ------------------------------------------------------------
+        html += """
             <h2>💼 Ações - Detalhes de Valuation</h2>
             <table>
                 <tr>
@@ -65,7 +92,7 @@ class Exporter:
                     <th class="v-justo-celula">V. Justo</th><th>Margem</th><th>Score</th><th>Status</th>
                 </tr>
         """
-        
+
         for a in acoes:
             st_css = "status-" + a['status'].lower().replace(" ", "-")
             m_cor = "positivo" if a['margem'] > 0 else "negativo"
@@ -85,11 +112,17 @@ class Exporter:
 
         html += """
             </table>
+        """
+
+        # ------------------------------------------------------------
+        # FIIs
+        # ------------------------------------------------------------
+        html += """
             <h2>🏢 Fundos Imobiliários</h2>
             <table>
                 <tr><th>Ticker</th><th>Preço</th><th>P/VP</th><th>DY</th><th class="v-justo-celula">V. Justo</th><th>Score</th><th>Status</th></tr>
         """
-        
+
         for f in fiis:
             st_css = "status-" + f['status'].lower().replace(" ", "-")
             html += f"""
@@ -103,13 +136,17 @@ class Exporter:
                     <td class="{st_css}">{f['status']}</td>
                 </tr>"""
 
-        html += f"""
-            </table>
+        html += "</table>"
+
+        # ------------------------------------------------------------
+        # SUGESTÃO DE APORTE
+        # ------------------------------------------------------------
+        html += """
             <h2 style='color: #2b6cb0;'>💰 Plano de Aporte Oportunista</h2>
             <table>
                 <tr><th>Ativo</th><th>Cotas a Comprar</th><th>Investimento Estimado</th></tr>
         """
-        
+
         for s in sugestao_aporte.get('sugestoes', []):
             html += f"""
                 <tr>
@@ -117,15 +154,114 @@ class Exporter:
                     <td style='font-size: 16px; font-weight: bold;'>{s['cotas']}</td>
                     <td>R$ {s['valor']:.2f}</td>
                 </tr>"""
-        
+
         html += f"""
             </table>
             <div class="card" style="background: #ebf8ff; border: 1px solid #3182ce; min-width: 300px;">
                 <span style="color: #2c5282;">Caixa Residual Próximo Aporte:</span><br>
                 <b style="font-size: 22px; color: #2b6cb0;">R$ {sugestao_aporte.get('caixa_residual', 0):.2f}</b>
             </div>
-            <p style="color: #718096; font-size: 11px; margin-top: 30px; text-align: center;">Meta: Aposentadoria aos 50 anos | Caio Portfolio Management</p>
-        </body></html>"""
+        """
+
+        # ------------------------------------------------------------
+        # TENDÊNCIAS POR ATIVO
+        # ------------------------------------------------------------
+        if tendencias_ativos:
+            html += """
+                <h2>📉 Tendências por Ativo</h2>
+                <table>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Preço</th>
+                        <th>Margem</th>
+                        <th>Score</th>
+                        <th>DY</th>
+                    </tr>
+            """
+            for t, tend in tendencias_ativos.items():
+                html += f"""
+                    <tr>
+                        <td class="ticker">{t}</td>
+                        <td>{tend.get('preco')}</td>
+                        <td>{tend.get('margem')}</td>
+                        <td>{tend.get('score')}</td>
+                        <td>{tend.get('dy')}</td>
+                    </tr>
+                """
+            html += "</table>"
+
+        # ------------------------------------------------------------
+        # RISCO POR ATIVO
+        # ------------------------------------------------------------
+        if riscos:
+            html += """
+                <h2>⚠️ Risco por Ativo</h2>
+                <table>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Volatilidade</th>
+                        <th>Drawdown</th>
+                        <th>Tendência</th>
+                        <th>Fundamentos</th>
+                        <th>Classe</th>
+                        <th>Concentração</th>
+                        <th>Risco Total</th>
+                    </tr>
+            """
+            for t, r in riscos.items():
+                html += f"""
+                    <tr>
+                        <td class="ticker">{t}</td>
+                        <td>{r['volatilidade']:.2f}%</td>
+                        <td>{r['drawdown']:.2f}%</td>
+                        <td>{r['risco_tendencia']}</td>
+                        <td>{r['risco_fundamentos']}</td>
+                        <td>{r['risco_classe']}</td>
+                        <td>{r['risco_concentracao']}</td>
+                        <td><b>{r['risco_total']:.2f}</b></td>
+                    </tr>
+                """
+            html += "</table>"
+
+        html += """
+            <style>
+                .btn-voltar {
+                    display: inline-block;
+                    padding: 12px 22px;
+                    background: linear-gradient(135deg, #3182ce, #2b6cb0);
+                    color: white;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    font-size: 14px;
+                    box-shadow: 0 4px 10px rgba(49,130,206,0.3);
+                    transition: all 0.25s ease-in-out;
+                }
+
+                .btn-voltar:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 8px 18px rgba(49,130,206,0.45);
+                    background: linear-gradient(135deg, #2b6cb0, #2c5282);
+                }
+
+                .btn-voltar:active {
+                    transform: translateY(0px);
+                    box-shadow: 0 4px 10px rgba(49,130,206,0.3);
+                }
+            </style>
+
+            <div style="text-align:center; margin-top: 40px;">
+                <a href="/" class="btn-voltar">
+                    ⬅ Voltar para a Carteira
+                </a>
+            </div>
+
+            <p style="color: #718096; font-size: 11px; margin-top: 30px; text-align: center;">
+                Meta: Aposentadoria aos 50 anos | Caio Portfolio Management
+            </p>
+        </body></html>
+        """
+
 
         with open(path, "w", encoding="utf-8") as f:
             f.write(html)

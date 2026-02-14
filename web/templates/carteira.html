@@ -1,17 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>🚀 Ciclo Executado</h1>
+<h2>Resumo da Carteira</h2>
 
-<p>O ciclo foi concluído com sucesso.</p>
-
-<h2>Resumo</h2>
-
-<ul>
-    <li>Avaliados: {{ resultado.avaliados|length }}</li>
-    <li>Alertas: {{ resultado.alertas|length }}</li>
-</ul>
-
-<a class="btn" href="/dashboard">Ver Dashboard</a>
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>Ticker</th>
+            <th>Quantidade</th>
+            <th>Preço Médio</th>
+            <th>Total Investido</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in posicoes %}
+        <tr>
+            <td>{{ p.ticker }}</td>
+            <td>{{ p.quantidade }}</td>
+            <td>R$ {{ p.preco_medio | round(2) }}</td>
+            <td>R$ {{ p.total_investido | round(2) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 {% endblock %}

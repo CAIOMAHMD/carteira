@@ -3,18 +3,17 @@ import sqlite3
 import requests
 from dotenv import load_dotenv
 
-# ============================
+# ============================================================
 # CONFIGURAÇÃO
-# ============================
+# ============================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Mesmo caminho que você colocou no app.py
+# Caminho fixo do banco dentro do container
 DB_PATH = "/app/web/carteira.db"
 
-# Carrega variáveis de ambiente (.env ou Docker ENV)
+# Carrega variáveis de ambiente
 load_dotenv()
 
+# Lê tanto BRAPI_TOKEN quanto BRAPI_API_KEY
 BRAPI_TOKEN = (
     os.getenv("BRAPI_TOKEN")
     or os.getenv("BRAPI_API_KEY")
@@ -24,16 +23,30 @@ if not BRAPI_TOKEN:
     raise RuntimeError("BRAPI_TOKEN / BRAPI_API_KEY não definido no ambiente.")
 
 
+# ============================================================
+# FUNÇÕES DE BANCO
+# ============================================================
+
+def get_connection():
+    return sqlite3.connect(DB_PATH)
+
+
+# ============================================================
+# FETCHER PRINCIPAL
+# ============================================================
+
 class AutoFetcher:
+
     @staticmethod
-    def _get_carteira():
+    def _get_tickers():
         """
-        Lê a tabela carteira do banco e retorna uma lista de tuplas:
-        [(ticker, quantidade, tipo), ...]
+        Lê todos os tickers da tabela 'carteira'.
+        (A tabela 'movimentacoes' é usada para cálculos, mas
+        a lista de tickers ainda vem da tabela carteira.)
         """
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_connection()
         c = conn.cursor()
-        c.execute("SELECT ticker, quantidade, tipo FROM carteira")
+        c.execute("SELECT ticker, tipo FROM carteira")
         rows = c.fetchall()
         conn.close()
         return rows
@@ -68,7 +81,6 @@ class AutoFetcher:
                 result[ticker] = quote
 
             except Exception:
-                # Em produção você pode logar o erro
                 continue
 
         return result
@@ -76,10 +88,10 @@ class AutoFetcher:
     @staticmethod
     def atualizar_dados():
         """
-        Lê a carteira, busca dados na BRAPI e retorna um dicionário
-        com dados de ações e FIIs separados.
+        Lê tickers da carteira, busca dados na BRAPI e retorna
+        um dicionário com dados de ações e FIIs separados.
         """
-        carteira = AutoFetcher._get_carteira()
+        carteira = AutoFetcher._get_tickers()
         if not carteira:
             return {"acoes": [], "fiis": []}
 
@@ -89,28 +101,20 @@ class AutoFetcher:
         acoes = []
         fiis = []
 
-        for ticker, quantidade, tipo in carteira:
+        for ticker, tipo in carteira:
             dados = brapi_data.get(ticker)
             if not dados:
                 continue
 
-            preco = dados.get("regularMarketPrice")
-            dy = dados.get("dividendYield")
-            pvp = dados.get("priceToBook")
-            lpa = dados.get("eps")
-            vpa = dados.get("bookValue")
-            roe = dados.get("roe")
-            cagr = None  # você pode calcular depois
-
             item = {
                 "ticker": ticker,
-                "preco": preco,
-                "dy": dy,
-                "pvp": pvp,
-                "lpa": lpa,
-                "vpa": vpa,
-                "roe": roe,
-                "cagr": cagr,
+                "preco": dados.get("regularMarketPrice"),
+                "dy": dados.get("dividendYield"),
+                "pvp": dados.get("priceToBook"),
+                "lpa": dados.get("eps"),
+                "vpa": dados.get("bookValue"),
+                "roe": dados.get("roe"),
+                "cagr": None,
                 "valor_justo": None,
                 "margem": None,
                 "score": None,
@@ -124,9 +128,12 @@ class AutoFetcher:
         return {"acoes": acoes, "fiis": fiis}
 
 
+# ============================================================
+# TESTE MANUAL
+# ============================================================
+
 if __name__ == "__main__":
-    # Teste rápido
-    print("Lendo carteira e consultando BRAPI...")
+    print("Testando AutoFetcher...")
     dados = AutoFetcher.atualizar_dados()
     print("Ações:", len(dados["acoes"]))
     print("FIIs:", len(dados["fiis"]))

@@ -1,110 +1,92 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>Minha Carteira</h1>
+<h2 class="mb-4">Dashboard da Carteira</h2>
 
-<!-- ===================== -->
-<!-- RESUMO EM CARDS -->
-<!-- ===================== -->
-<div class="grid">
+<h4>Ações</h4>
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>Ticker</th>
+            <th>Preço Atual</th>
+            <th>Preço Médio</th>
+            <th>Quantidade</th>
+            <th>Total Investido</th>
+            <th>Total Atual</th>
+            <th>Lucro</th>
+            <th>Rentabilidade</th>
+            <th>DY</th>
+            <th>P/VP</th>
+            <th>ROE</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for acao in dados.acoes %}
+        <tr>
+            <td>{{ acao.ticker }}</td>
+            <td>R$ {{ acao.preco or 0 }}</td>
+            <td>R$ {{ (acao.preco_medio or 0) | round(2) }}</td>
+            <td>{{ acao.quantidade or 0 }}</td>
+            <td>R$ {{ (acao.total_investido or 0) | round(2) }}</td>
+            <td>R$ {{ (acao.total_atual or 0) | round(2) }}</td>
 
-    <div class="card">
-        <h3>Total de Ativos</h3>
-        <div class="card-value">{{ carteira|length }}</div>
-    </div>
+            <td style="color: {{ 'green' if (acao.lucro or 0) >= 0 else 'red' }}">
+                R$ {{ (acao.lucro or 0) | round(2) }}
+            </td>
 
-    <div class="card">
-        <h3>Ações com Dados</h3>
-        <div class="card-value">{{ resultado.acoes|length }}</div>
-    </div>
+            <td style="color: {{ 'green' if (acao.rentabilidade or 0) >= 0 else 'red' }}">
+                {{ ((acao.rentabilidade or 0) * 100) | round(2) }}%
+            </td>
 
-    <div class="card">
-        <h3>FIIs com Dados</h3>
-        <div class="card-value">{{ resultado.fiis|length }}</div>
-    </div>
-
-</div>
-
-<a href="/add" class="btn">Adicionar Ativo</a>
-<a href="/run" class="btn">Atualizar Dados</a>
-
-
-<!-- ===================== -->
-<!-- AÇÕES COMPLETAS -->
-<!-- ===================== -->
-<h2>Ações — Dados Completos</h2>
-
-{% if resultado.acoes %}
-<table>
-    <tr>
-        <th>Ticker</th>
-        <th>Preço</th>
-        <th>DY</th>
-        <th>P/VP</th>
-        <th>LPA</th>
-        <th>VPA</th>
-        <th>ROE</th>
-        <th>CAGR</th>
-        <th>V. Justo</th>
-        <th>Margem</th>
-        <th>Score</th>
-    </tr>
-
-    {% for a in resultado.acoes %}
-    <tr>
-        <td>{{ a.ticker }}</td>
-        <td>R$ {{ a.preco }}</td>
-        <td>{{ a.dy }}%</td>
-        <td>{{ a.pvp }}</td>
-        <td>{{ a.lpa }}</td>
-        <td>{{ a.vpa }}</td>
-        <td>{{ a.roe }}%</td>
-        <td>{{ a.cagr }}%</td>
-        <td>R$ {{ a.valor_justo }}</td>
-        <td class="{{ 'negativo' if a.margem < 0 else 'score' }}">{{ a.margem }}%</td>
-        <td class="score">{{ a.score }}</td>
-    </tr>
-    {% endfor %}
+            <td>{{ acao.dy or '-' }}</td>
+            <td>{{ acao.pvp or '-' }}</td>
+            <td>{{ acao.roe or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
-{% else %}
-<p>Nenhuma ação encontrada na BRAPI.</p>
-{% endif %}
 
+<hr>
 
+<h4>FIIs</h4>
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>Ticker</th>
+            <th>Preço Atual</th>
+            <th>Preço Médio</th>
+            <th>Quantidade</th>
+            <th>Total Investido</th>
+            <th>Total Atual</th>
+            <th>Lucro</th>
+            <th>Rentabilidade</th>
+            <th>DY</th>
+            <th>P/VP</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fii in dados.fiis %}
+        <tr>
+            <td>{{ fii.ticker }}</td>
+            <td>R$ {{ fii.preco or 0 }}</td>
+            <td>R$ {{ (fii.preco_medio or 0) | round(2) }}</td>
+            <td>{{ fii.quantidade or 0 }}</td>
+            <td>R$ {{ (fii.total_investido or 0) | round(2) }}</td>
+            <td>R$ {{ (fii.total_atual or 0) | round(2) }}</td>
 
-<!-- ===================== -->
-<!-- FIIs COMPLETOS -->
-<!-- ===================== -->
-<h2>Fundos Imobiliários — Dados Completos</h2>
+            <td style="color: {{ 'green' if (fii.lucro or 0) >= 0 else 'red' }}">
+                R$ {{ (fii.lucro or 0) | round(2) }}
+            </td>
 
-{% if resultado.fiis %}
-<table>
-    <tr>
-        <th>Ticker</th>
-        <th>Preço</th>
-        <th>DY</th>
-        <th>P/VP</th>
-        <th>VPA</th>
-        <th>V. Justo</th>
-        <th>Margem</th>
-        <th>Score</th>
-    </tr>
+            <td style="color: {{ 'green' if (fii.rentabilidade or 0) >= 0 else 'red' }}">
+                {{ ((fii.rentabilidade or 0) * 100) | round(2) }}%
+            </td>
 
-    {% for f in resultado.fiis %}
-    <tr>
-        <td>{{ f.ticker }}</td>
-        <td>R$ {{ f.preco }}</td>
-        <td>{{ f.dy }}%</td>
-        <td>{{ f.pvp }}</td>
-        <td>{{ f.vpa }}</td>
-        <td>R$ {{ f.valor_justo }}</td>
-        <td>{{ f.margem }}%</td>
-        <td class="score">{{ f.score }}</td>
-    </tr>
-    {% endfor %}
+            <td>{{ fii.dy or '-' }}</td>
+            <td>{{ fii.pvp or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
-{% else %}
-<p>Nenhum FII encontrado na BRAPI.</p>
-{% endif %}
 
 {% endblock %}

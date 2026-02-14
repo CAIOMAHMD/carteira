@@ -1,126 +1,151 @@
-from flask import Flask, render_template, send_file, redirect, request, url_for
 import os
 import sqlite3
-
-from engine.run_cycle import run_cycle
+from flask import Flask, render_template, request, redirect, url_for
 from engine.auto_fetcher import AutoFetcher
 
-# ============================
-# CONFIGURAÇÃO DO FLASK
-# ============================
+app = Flask(__name__)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-
-app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
-
-# Caminho do banco (correto para rodar dentro da pasta /web)
 DB_PATH = "/app/web/carteira.db"
 
 
+# ============================================================
+# FUNÇÕES DE BANCO
+# ============================================================
 
-# ============================
+def get_connection():
+    return sqlite3.connect(DB_PATH)
+
+
+# ============================================================
+# CÁLCULO DA POSIÇÃO REAL (USANDO MOVIMENTAÇÕES)
+# ============================================================
+
+def calcular_posicao(ticker):
+    conn = get_connection()
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT tipo, quantidade, preco
+        FROM movimentacoes
+        WHERE ticker = ?
+    """, (ticker,))
+    movs = c.fetchall()
+    conn.close()
+
+    if not movs:
+        return None
+
+    total_comprado = 0
+    total_investido = 0
+    total_vendido = 0
+
+    for tipo, qtd, preco in movs:
+        if tipo == "compra":
+            total_comprado += qtd
+            total_investido += qtd * preco
+        elif tipo == "venda":
+            total_vendido += qtd
+
+    quantidade_atual = total_comprado - total_vendido
+
+    if quantidade_atual <= 0:
+        return None
+
+    preco_medio = total_investido / total_comprado
+
+    return {
+        "quantidade": quantidade_atual,
+        "preco_medio": preco_medio,
+        "total_investido": preco_medio * quantidade_atual
+    }
+
+
+# ============================================================
 # ROTAS
-# ============================
+# ============================================================
 
 @app.route("/")
 def index():
-    # 1) Carteira REAL (banco)
-    carteira = AutoFetcher._get_carteira()
+    dados = AutoFetcher.atualizar_dados()
 
-    # 2) Dados de mercado
-    resultado = run_cycle(aporte_total=0, modo="moderado")
+    # Enriquecer dados com posição real
+    for lista in [dados["acoes"], dados["fiis"]]:
+        for item in lista:
+            pos = calcular_posicao(item["ticker"])
+            if not pos:
+                continue
 
-    return render_template("index.html", carteira=carteira, resultado=resultado)
+            item["quantidade"] = pos["quantidade"]
+            item["preco_medio"] = pos["preco_medio"]
+            item["total_investido"] = pos["total_investido"]
 
+            if item["preco"]:
+                item["total_atual"] = item["preco"] * pos["quantidade"]
+                item["lucro"] = item["total_atual"] - item["total_investido"]
+                item["rentabilidade"] = item["lucro"] / item["total_investido"]
 
-@app.route("/dashboard")
-def dashboard():
-    dashboard_path = os.path.abspath(os.path.join(BASE_DIR, "..", "exports", "dashboard.html"))
-
-    if not os.path.exists(dashboard_path):
-        return "Dashboard ainda não foi gerado. Rode o ciclo primeiro."
-
-    return send_file(dashboard_path)
-
-
-@app.route("/run")
-def run():
-    aporte = request.args.get("aporte", 500, type=int)
-    modo = request.args.get("modo", "moderado")
-
-    resultado = run_cycle(aporte_total=aporte, modo=modo)
-
-    return render_template("carteira.html", resultado=resultado)
+    return render_template("index.html", dados=dados)
 
 
-@app.route("/config", methods=["GET", "POST"])
-def config():
-    if request.method == "POST":
-        aporte = request.form.get("aporte")
-        modo = request.form.get("modo")
-        return redirect(url_for("run", aporte=aporte, modo=modo))
-
-    return render_template("config.html")
-
-
-@app.route("/login")
-def login():
-    return render_template("login.html")
-
-
-# ============================
-# ADICIONAR ATIVO
-# ============================
-
-@app.route("/add", methods=["GET", "POST"])
-def add():
+@app.route("/comprar", methods=["GET", "POST"])
+def comprar():
     if request.method == "POST":
         ticker = request.form["ticker"].upper().strip()
-        quant = int(request.form["quant"])
-        tipo = request.form["tipo"]
+        quantidade = float(request.form["quantidade"])
+        preco = float(request.form["preco"])
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_connection()
         c = conn.cursor()
-
-        # Verifica duplicado
-        c.execute("SELECT 1 FROM carteira WHERE ticker = ?", (ticker,))
-        existe = c.fetchone()
-
-        if existe:
-            conn.close()
-            return "Ativo já existe na carteira."
-
-        c.execute(
-            "INSERT INTO carteira (ticker, quantidade, tipo) VALUES (?, ?, ?)",
-            (ticker, quant, tipo)
-        )
+        c.execute("""
+            INSERT INTO movimentacoes (ticker, tipo, quantidade, preco)
+            VALUES (?, 'compra', ?, ?)
+        """, (ticker, quantidade, preco))
         conn.commit()
         conn.close()
 
         return redirect(url_for("index"))
 
-    return render_template("add.html")
+    return render_template("comprar.html")
 
 
-# ============================
-# REMOVER ATIVO
-# ============================
+@app.route("/vender", methods=["GET", "POST"])
+def vender():
+    if request.method == "POST":
+        ticker = request.form["ticker"].upper().strip()
+        quantidade = float(request.form["quantidade"])
+        preco = float(request.form["preco"])
 
-@app.route("/delete/<ticker>")
-def delete(ticker):
-    conn = sqlite3.connect(DB_PATH)
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO movimentacoes (ticker, tipo, quantidade, preco)
+            VALUES (?, 'venda', ?, ?)
+        """, (ticker, quantidade, preco))
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("index"))
+
+    return render_template("vender.html")
+
+
+@app.route("/carteira")
+def carteira():
+    conn = get_connection()
     c = conn.cursor()
-    c.execute("DELETE FROM carteira WHERE ticker = ?", (ticker,))
-    conn.commit()
+    c.execute("SELECT DISTINCT ticker FROM movimentacoes")
+    tickers = [row[0] for row in c.fetchall()]
     conn.close()
-    return redirect(url_for("index"))
 
+    posicoes = []
 
-# ============================
-# MAIN
-# ============================
+    for t in tickers:
+        pos = calcular_posicao(t)
+        if pos:
+            posicoes.append({"ticker": t, **pos})
+
+    return render_template("carteira.html", posicoes=posicoes)
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True, use_reloader=False)
+    app.run(host="0.0.0.0", port=5000)

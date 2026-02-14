@@ -7,3 +7,4 @@ beautifulsoup4
 lxml
 schedule
 python-dateutil
+python-dotenv

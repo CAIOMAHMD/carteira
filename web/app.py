@@ -15,8 +15,9 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 
-# Caminho do banco (ajusta se o teu estiver noutro lugar)
-DB_PATH = os.path.abspath(os.path.join(BASE_DIR, "carteira.db"))
+# Caminho do banco (correto para rodar dentro da pasta /web)
+DB_PATH = "/app/web/carteira.db"
+
 
 
 # ============================
@@ -28,7 +29,7 @@ def index():
     # 1) Carteira REAL (banco)
     carteira = AutoFetcher._get_carteira()
 
-    # 2) Dados de mercado (podem falhar para alguns tickers)
+    # 2) Dados de mercado
     resultado = run_cycle(aporte_total=0, modo="moderado")
 
     return render_template("index.html", carteira=carteira, resultado=resultado)

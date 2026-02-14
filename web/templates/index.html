@@ -38,29 +38,31 @@
 <table>
     <tr>
         <th>Ticker</th>
-        <th>Crescimento</th>
         <th>Preço</th>
-        <th>Graham</th>
-        <th>Bazin</th>
-        <th>Lynch</th>
+        <th>DY</th>
+        <th>P/VP</th>
+        <th>LPA</th>
+        <th>VPA</th>
+        <th>ROE</th>
+        <th>CAGR</th>
         <th>V. Justo</th>
         <th>Margem</th>
         <th>Score</th>
-        <th>Status</th>
     </tr>
 
     {% for a in resultado.acoes %}
     <tr>
         <td>{{ a.ticker }}</td>
-        <td>{{ a.crescimento }}</td>
         <td>R$ {{ a.preco }}</td>
-        <td>R$ {{ a.graham }}</td>
-        <td>R$ {{ a.bazin }}</td>
-        <td>R$ {{ a.lynch }}</td>
+        <td>{{ a.dy }}%</td>
+        <td>{{ a.pvp }}</td>
+        <td>{{ a.lpa }}</td>
+        <td>{{ a.vpa }}</td>
+        <td>{{ a.roe }}%</td>
+        <td>{{ a.cagr }}%</td>
         <td>R$ {{ a.valor_justo }}</td>
         <td class="{{ 'negativo' if a.margem < 0 else 'score' }}">{{ a.margem }}%</td>
         <td class="score">{{ a.score }}</td>
-        <td>{{ a.status }}</td>
     </tr>
     {% endfor %}
 </table>
@@ -80,22 +82,24 @@
     <tr>
         <th>Ticker</th>
         <th>Preço</th>
-        <th>P/VP</th>
         <th>DY</th>
+        <th>P/VP</th>
+        <th>VPA</th>
         <th>V. Justo</th>
+        <th>Margem</th>
         <th>Score</th>
-        <th>Status</th>
     </tr>
 
     {% for f in resultado.fiis %}
     <tr>
         <td>{{ f.ticker }}</td>
         <td>R$ {{ f.preco }}</td>
-        <td>{{ f.pvp }}</td>
         <td>{{ f.dy }}%</td>
+        <td>{{ f.pvp }}</td>
+        <td>{{ f.vpa }}</td>
         <td>R$ {{ f.valor_justo }}</td>
+        <td>{{ f.margem }}%</td>
         <td class="score">{{ f.score }}</td>
-        <td>{{ f.status }}</td>
     </tr>
     {% endfor %}
 </table>

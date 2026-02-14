@@ -3,7 +3,9 @@ import sqlite3
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "web", "carteira.db"))
+DB_PATH = "/app/web/carteira.db"
+
+
 
 # ============================================================
 # CONFIGURAÇÃO DA BRAPI

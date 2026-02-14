@@ -1,101 +1,109 @@
-import requests
-import sqlite3
 import os
+import sqlite3
+import requests
+from dotenv import load_dotenv
+
+# ============================
+# CONFIGURAÇÃO
+# ============================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Mesmo caminho que você colocou no app.py
 DB_PATH = "/app/web/carteira.db"
 
+# Carrega variáveis de ambiente (.env ou Docker ENV)
+load_dotenv()
 
+BRAPI_TOKEN = (
+    os.getenv("BRAPI_TOKEN")
+    or os.getenv("BRAPI_API_KEY")
+)
 
-# ============================================================
-# CONFIGURAÇÃO DA BRAPI
-# ============================================================
-BRAPI_TOKEN = "COLOQUE_SUA_API_KEY_AQUI"   # <<< IMPORTANTE
-BRAPI_URL = "https://brapi.dev/api/quote/{}?token={}&range=1d&interval=1d&fundamental=true"
+if not BRAPI_TOKEN:
+    raise RuntimeError("BRAPI_TOKEN / BRAPI_API_KEY não definido no ambiente.")
 
 
 class AutoFetcher:
-
-    # ============================================================
-    # LER CARTEIRA DO BANCO
-    # ============================================================
     @staticmethod
     def _get_carteira():
+        """
+        Lê a tabela carteira do banco e retorna uma lista de tuplas:
+        [(ticker, quantidade, tipo), ...]
+        """
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT ticker, quantidade, tipo FROM carteira")
-        dados = c.fetchall()
+        rows = c.fetchall()
         conn.close()
-        return dados
-
-    # ============================================================
-    # NORMALIZADORES
-    # ============================================================
-    @staticmethod
-    def _normalizar_preco(v):
-        try:
-            return round(float(v), 2)
-        except:
-            return 0.0
+        return rows
 
     @staticmethod
-    def _normalizar_percentual(v):
-        try:
-            return round(float(v) * 100, 2)
-        except:
-            return 0.0
+    def _fetch_brapi_data(tickers):
+        """
+        Busca dados na BRAPI para uma lista de tickers.
+        Retorna um dicionário {ticker: dados}.
+        """
+        if not tickers:
+            return {}
 
-    # ============================================================
-    # BUSCAR DADOS NA BRAPI
-    # ============================================================
-    @staticmethod
-    def _buscar_brapi(ticker):
-        try:
-            url = BRAPI_URL.format(ticker, BRAPI_TOKEN)
-            r = requests.get(url, timeout=10)
-            data = r.json()
+        base_url = "https://brapi.dev/api/quote"
+        headers = {"User-Agent": "carteira-app"}
 
-            if "results" not in data or len(data["results"]) == 0:
-                print(f"⚠️ BRAPI não retornou dados para {ticker}")
-                return None
+        result = {}
 
-            return data["results"][0]
+        for ticker in tickers:
+            try:
+                url = f"{base_url}/{ticker}?token={BRAPI_TOKEN}"
+                resp = requests.get(url, headers=headers, timeout=10)
 
-        except Exception as e:
-            print(f"❌ Erro BRAPI {ticker}: {e}")
-            return None
+                if resp.status_code != 200:
+                    continue
 
-    # ============================================================
-    # ATUALIZAR DADOS (BRAPI APENAS)
-    # ============================================================
-    @staticmethod
-    def atualizar_dados():
-        print("Atualizando dados de mercado...")
+                data = resp.json()
+                if "results" not in data or not data["results"]:
+                    continue
 
-        carteira = AutoFetcher._get_carteira()
-        resultados = {}
+                quote = data["results"][0]
+                result[ticker] = quote
 
-        for ticker, quant, tipo in carteira:
-            print(f"🔎 Buscando dados de {ticker}...")
-
-            api = AutoFetcher._buscar_brapi(ticker)
-
-            if not api:
-                print(f"⚠️ Sem dados para {ticker}, ignorando.")
+            except Exception:
+                # Em produção você pode logar o erro
                 continue
 
-            preco = AutoFetcher._normalizar_preco(api.get("regularMarketPrice", 0))
-            dy = AutoFetcher._normalizar_percentual(api.get("dividendYield", 0))
-            pvp = api.get("priceToBook", 0)
-            lpa = api.get("earningsPerShare", 0)
-            vpa = api.get("bookValuePerShare", 0)
-            roe = AutoFetcher._normalizar_percentual(api.get("returnOnEquity", 0))
-            cagr = AutoFetcher._normalizar_percentual(api.get("revenueGrowth", 0))
+        return result
 
-            resultados[ticker] = {
+    @staticmethod
+    def atualizar_dados():
+        """
+        Lê a carteira, busca dados na BRAPI e retorna um dicionário
+        com dados de ações e FIIs separados.
+        """
+        carteira = AutoFetcher._get_carteira()
+        if not carteira:
+            return {"acoes": [], "fiis": []}
+
+        tickers = [c[0] for c in carteira]
+        brapi_data = AutoFetcher._fetch_brapi_data(tickers)
+
+        acoes = []
+        fiis = []
+
+        for ticker, quantidade, tipo in carteira:
+            dados = brapi_data.get(ticker)
+            if not dados:
+                continue
+
+            preco = dados.get("regularMarketPrice")
+            dy = dados.get("dividendYield")
+            pvp = dados.get("priceToBook")
+            lpa = dados.get("eps")
+            vpa = dados.get("bookValue")
+            roe = dados.get("roe")
+            cagr = None  # você pode calcular depois
+
+            item = {
                 "ticker": ticker,
-                "quant": quant,
-                "tipo": tipo,
                 "preco": preco,
                 "dy": dy,
                 "pvp": pvp,
@@ -103,6 +111,22 @@ class AutoFetcher:
                 "vpa": vpa,
                 "roe": roe,
                 "cagr": cagr,
+                "valor_justo": None,
+                "margem": None,
+                "score": None,
             }
 
-        return resultados
+            if tipo == "acao":
+                acoes.append(item)
+            else:
+                fiis.append(item)
+
+        return {"acoes": acoes, "fiis": fiis}
+
+
+if __name__ == "__main__":
+    # Teste rápido
+    print("Lendo carteira e consultando BRAPI...")
+    dados = AutoFetcher.atualizar_dados()
+    print("Ações:", len(dados["acoes"]))
+    print("FIIs:", len(dados["fiis"]))

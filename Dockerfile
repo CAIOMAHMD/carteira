@@ -4,6 +4,7 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1
 
 ENV BRAPI_API_KEY=mw5kpFNazrDmGsqzug4Sdv
+ENV BRAPI_TOKEN=mw5kpFNazrDmGsqzug4Sdv
 ENV PYTHONPATH="/app"
 
 
